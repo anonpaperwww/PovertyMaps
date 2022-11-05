@@ -1176,11 +1176,13 @@ def plot_performance(df, metric='r2', kind='swarm', output=None):
   wide_kinds = ['box','boxen','violin']
   
   data = df.query("features in @MAIN_FEATURES").copy()
+  palette = 'tab20'
   
   if kind=='line':
     fg = sns.FacetGrid(data=data, 
                        row='country', col='relocation',
                        hue='model', 
+                       palette=palette,
                        margin_titles=True, height=int(SIZE/2.), aspect=1.0)
 
     fg.map(sns.lineplot, 'recency', metric, estimator=np.mean, ci='sd', sort=True)
@@ -1192,6 +1194,7 @@ def plot_performance(df, metric='r2', kind='swarm', output=None):
                    row='country', col='relocation',
                    hue='model', 
                    kind=kind,
+                   palette=palette,
                    margin_titles=True, height=int(SIZE/2.), aspect=1.0 if kind not in wide_kinds else 2.0)
   
 
@@ -1792,9 +1795,57 @@ def plot_cross_country_performance(df_dr, metric, results, overall=True, output=
   fg.set_xlabels(f"{metric.upper()} within-country")
   fg.set_ylabels(f"{metric.upper()} cross-country")
   plt.subplots_adjust(wspace=0.2, hspace=0.2)
+  
   ### savefig
   if output is not None:
     fn = os.path.join(output,f"cross_country_performance_{metric}.pdf")
+    fg.savefig(fn, dpi=300)
+    print(f"{fn} saved!")
+  
+  plt.show()
+  plt.close()
+  
+  
+def plot_sample_weights_performance(metric, nclasses, output=None):
+
+  metric = validate_metric(metric)
+  
+  if nclasses not in [4,10]:
+    raise Exception("nclasses must be either 4 or 10")
+    
+  fn = f'results/sample_weights/summary_results_ses{nclasses}.csv'
+  df = ios.load_csv(fn)
+  
+  df.rename(columns={metric:metric.upper()}, inplace=True)
+  metric = metric.upper()
+  
+  def refline(data, **kws):
+      n = len(data)
+      ax = plt.gca()
+      k = '(wENS 0.9)'
+      metric = kws['metric']
+      tmp = data.query("weight_kind==@k")
+      x, = np.where(data.weight_kind.unique() == k)
+      y = tmp[metric].mean()
+      ax.axhline(y, lw=1, ls='--', c='red')
+      ax.axvline(x, lw=1, ls='--', c='red')
+
+  fg = sns.catplot(data=df, 
+                   kind='point',
+                   col='metric', row='country', 
+                   x='weight_kind', y=metric,
+                   margin_titles=True, height=2.5, aspect=1.7,
+                   sharey=False,
+                  )
+  fg.map_dataframe(refline, metric=metric)
+  fg.set_titles(row_template = '{row_name}', col_template = '{col_name}')
+  fg.set_xticklabels(rotation=90)
+  plt.tight_layout()
+  plt.subplots_adjust(wspace=0.16, hspace=0.16)
+  
+  ### savefig
+  if output is not None:
+    fn = os.path.join(output, f'sm_performance_{metric}_sample_weights_{nclasses}classes.pdf')
     fg.savefig(fn, dpi=300)
     print(f"{fn} saved!")
   

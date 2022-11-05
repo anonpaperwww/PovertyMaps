@@ -17,7 +17,12 @@ Interpreting wealth distribution via poverty map inference using multimodal data
 9. Poverty maps: `python batch_infer_poverty_maps.py -ccode UG -model CB`
 10. Cross-country testing: `python batch_cross_predictions.py`
 
-## Plots in paper
-- Main paper: [paper/main.ipynb] (files: [paper/main-plots])
-- Supplementary material: [paper/supmat.ipynb] (files: [paper/supmat-plots])
-- Data (results): [paper/results/*]
+## Plots in paper (notebooks)
+- Open [Main results](../blob/master/paper/main.ipynb) (or download figures [here](../blob/master/paper/main-plots))
+- Open [Supplementary material](../blob/master/paper/supmat.ipynb) (or download figures [here](../blob/master/paper/supmat-plots))
+- Download [results](../blob/main/paper/results/*)
+
+## Interactive tool
+Try out the [interactive tool](http://34.176.244.156/) to see the high-resolution poverty map of Sierra Leone and Uganda.
+
+<img width="1505" alt="screenshot" src="https://github.com/anonpaperwww/PovertyMaps/blob/main/interactive_tool.png">

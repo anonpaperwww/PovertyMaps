@@ -1,0 +1,5 @@
+ground_truth.csv
+cross_modeling_fmaps
+residuals.csv
+.ipynb_checkpoints
+__pycache__

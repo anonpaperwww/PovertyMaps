@@ -1,0 +1,23 @@
+,country,configuration,nrmse_mean,nrmse_std,kind
+2,Sierra Leone,N-N,0.65,0.02,recency
+5,Sierra Leone,ON,0.69,0.02,recency
+4,Sierra Leone,O-N,0.75,0.02,recency
+0,Sierra Leone,O-O,0.76,0.08,recency
+6,Uganda,O-O,0.69,0.04,recency
+11,Uganda,ON,0.71,0.02,recency
+10,Uganda,O-N,0.78,0.01,recency
+8,Uganda,N-N,0.79,0.09,recency
+1,Sierra Leone,rc,0.67,0.02,relocation
+0,Sierra Leone,none,0.69,0.02,relocation
+2,Sierra Leone,ruc,0.69,0.03,relocation
+3,Uganda,none,0.71,0.02,relocation
+5,Uganda,ruc,0.71,0.03,relocation
+4,Uganda,rc,0.73,0.03,relocation
+0,Sierra Leone,no,0.74,0.02,augmented
+1,Sierra Leone,yes,0.76,0.01,augmented
+3,Uganda,yes,0.75,0.03,augmented
+2,Uganda,no,0.77,0.01,augmented
+1,Sierra Leone,yes,0.61,0.03,weighted
+0,Sierra Leone,no,0.64,0.02,weighted
+2,Uganda,no,0.65,0.03,weighted
+3,Uganda,yes,0.66,0.05,weighted

@@ -5,7 +5,6 @@ import glob
 import matplotlib
 import numpy as np
 import pandas as pd
-
 import seaborn as sns 
 from tqdm import tqdm 
 import geopandas as gpd
@@ -14,6 +13,9 @@ from matplotlib import rc
 from itertools import product
 import matplotlib.pyplot as plt
 from scipy.stats import pearsonr
+from scipy.stats import shapiro
+from scipy.stats import anderson
+from scipy.stats import normaltest
 import matplotlib.image as mpimg
 from collections import OrderedDict
 import matplotlib.gridspec as gridspec
@@ -587,6 +589,110 @@ def summary_from_predictions(root, country):
   
   return df
 
+
+####################################################################################################
+# Normal test
+####################################################################################################
+
+def print_normal_test_ground_truth(root, country_years):
+  
+  for country, years in country_years.items():
+    print(f"==== {country},{years} =====")
+    path = os.path.join(root, country)
+    
+    # data
+    fn_clusters = ios.get_places_file(path, years=years, verbose=False)
+    df_clusters = ios.load_csv(fn_clusters)
+    fn_households = fn_clusters.replace('/clusters/','/households/').replace('_cluster.csv','_household.csv')
+    df_households = ios.load_csv(fn_households)
+    df_households.loc[:,'gtID'] = df_households.apply(lambda row:f"{row.ccode}{row.year:4d}{row.hv001:010}", axis=1)
+    
+    # quintiles
+    labels = [f"Q{q}" for q in np.arange(1,N_QUANTILES+1,1)]
+    df_clusters.loc[:,f'quintile'] = pd.qcut(df_clusters.mean_wi, N_QUANTILES, labels=labels, precision=0, retbins=False)
+  
+    is_gaussian = {}
+    for q in labels:
+      is_gaussian[q] = []
+      qhh = df_clusters.query("quintile==@q").set_index('gtID').join(df_households[['gtID','hv001','wi']].set_index('gtID'))
+      
+      for (c,y), df in qhh.groupby(['hv001','year']):  
+        x = df.wi
+        if x.shape[0]<8:
+          print(f"Cluster {c} ({y}) is too small: {x.shape[0]} households only (at least 8 are required)")
+        else:
+          is_gaussian[q].append(normal_test(x, verbose=False))
+      is_gaussian[q] = np.array(is_gaussian[q])
+      
+    all_clusters = np.array([])
+    for q,data in is_gaussian.items():
+      print(f"{q}: {np.count_nonzero(data == 1)} of {data.shape[0]} ({np.count_nonzero(data == 1)*100/data.shape[0]:.2f}%)")
+      all_clusters = np.append(all_clusters, data)
+      
+    print(f"All clusters: {np.count_nonzero(all_clusters == 1)} of {all_clusters.shape[0]} ({np.count_nonzero(all_clusters == 1)*100/all_clusters.shape[0]:.2f}%)")
+    
+  return
+
+def normal_test(x, alpha=0.05, test_name='k2', verbose=True):
+    ### https://machinelearningmastery.com/a-gentle-introduction-to-normality-tests-in-python/
+    valid_tests = ['k2','normaltest','shapiro']
+    if test_name not in valid_tests:
+        raise Exception('Not valid test_name. Try: k2, normaltest, shapiro')
+        
+    m = np.mean(x)
+    std = np.std(x)
+    if verbose:
+        print(f"mean = {m:g}, std.dev. = {std:g}")
+    
+    if verbose:
+        print(f"H0: x comes from a normal distribution ($\alpha$={alpha})")
+    
+    fnc = normaltest if test_name in ['k2','normaltest'] else shapiro
+    name = fnc.__name__
+    k, p = fnc(x)
+    if verbose:
+      print(f"k = {k:g}, p = {p:g}")
+    if p <= alpha:
+        if verbose:
+            print('Data does NOT look Gaussian (reject H0)')
+        return False
+    else:
+        if verbose:
+            print('Data looks Gaussian (fail to reject H0)')
+        return True
+    
+def summary_normal_test(x, alpha=0.05):
+    ### https://machinelearningmastery.com/a-gentle-introduction-to-normality-tests-in-python/
+    valid_tests = [normaltest,shapiro,anderson]
+    
+    m = np.mean(x)
+    std = np.std(x)
+    print(f"mean = {m:g}, std.dev. = {std:g}")
+    
+    print(f"H0: x comes from a normal distribution ($\alpha$={alpha})")
+    
+    for fnc in valid_tests:
+        name = fnc.__name__
+        print(f"====== {name} ======")
+        
+        if name in ['normaltest','shapiro']:
+            if normal_test(x, test_name=name, verbose=False):
+                print('Data looks Gaussian (fail to reject H0)')
+            else:
+                print('Data does NOT look Gaussian (reject H0)')
+        else:
+            result = anderson(x)
+            print(f"statistic: {result.statistic:g}")
+     
+            for i in range(len(result.critical_values)):
+                sl, cv = result.significance_level[i], result.critical_values[i]
+                if result.statistic < result.critical_values[i]:
+                    print(f'{sl:g} {cv:g}, data looks Gaussian (fail to reject H0)')
+                else:
+                    print(f'{sl:g}: {cv:g}, data does NOT look Gaussian (reject H0)')
+                    
+                    
+                    
 ####################################################################################################
 # Validations
 ####################################################################################################
@@ -1630,7 +1736,8 @@ def plot_variability_full(df_rs, output=None):
     ha = 'right'
     va = 'bottom'
     fs = 12
-    ax.text(x=x, y=y, s=s, color=kws['color'], va=va, ha=ha, transform=ax.transAxes, size=fs, bbox=dict(facecolor='white', edgecolor='none',pad=0.0))
+    ax.text(x=x, y=y, s=s, color=kws['color'], va=va, ha=ha, transform=ax.transAxes, 
+            size=fs, bbox=dict(facecolor='white', edgecolor='none',pad=0.0))
     ### Annotate end  
     
   # Only necesary data (best models)
@@ -1656,7 +1763,7 @@ def plot_variability_full(df_rs, output=None):
   fg = sns.FacetGrid(data=data, col='country', col_order=countries, 
                      row='kind', 
                      hue='settlement', hue_order=['urban','rural'], 
-                     height=3.0, aspect=0.9, margin_titles=True, legend_out=False)
+                     height=3.0, aspect=1.2, margin_titles=True, legend_out=False)
   
   # titles
   fg.set_titles(row_template = '{row_name}', col_template = '{col_name}')
@@ -1672,7 +1779,8 @@ def plot_variability_full(df_rs, output=None):
         ax=fg.axes[r,c]
         ax.axvline(v, ls='dotted', c='lightgrey') #(0, (1, 10))
         #if r>0 and q !=0.4:
-        ax.text(s=f'Q{i+1}', x=v, y=25, ha='center', c='lightgrey',va='top',size=12,bbox=dict(facecolor='white', edgecolor='none',pad=3.0)) 
+        if i+1 != 2:
+          ax.text(s=f'Q{i+1}', x=v, y=25, ha='center', c='lightgrey',va='top',size=12,bbox=dict(facecolor='white', edgecolor='none',pad=3.0)) 
   
   # mean vs std
   fg.map_dataframe(annotate_corr_full)

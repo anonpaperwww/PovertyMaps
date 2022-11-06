@@ -5,6 +5,18 @@ Interpreting wealth distribution via poverty map inference using multimodal data
 <img width="888" alt="screenshot" src="https://github.com/anonpaperwww/PovertyMaps/blob/main/paper/main-plots/CNN_CB_model_v3.png">
 </picture>
 
+## Plots in paper (notebooks)
+- Open [Main results](paper/main.ipynb) (or download figures [here](paper/main-plots))
+- Open [Supplementary material](paper/supmat.ipynb) (or download figures [here](paper/supmat-plots))
+- Download [results](paper/results/)
+
+## Interactive tool
+Try out the [interactive tool](http://34.176.244.156/) to see the high-resolution poverty map of Sierra Leone and Uganda.
+
+<picture>
+<img width="1505" alt="screenshot" src="https://github.com/anonpaperwww/PovertyMaps/blob/main/interactive_tool.png">
+</picture>
+
 ## Scripts
 `cd scripts`
 1. Init: `./batch_init.sh -r ../data/Uganda -c UG -y 2016,2018 -n 10`
@@ -18,15 +30,3 @@ Interpreting wealth distribution via poverty map inference using multimodal data
 9. Fmaps: `python cnn_predict.py -r ../data/Uganda/ -years 2016.,2018 -model cnn_mp_dp_relu_sigmoid_adam_mean_std_regression -yatt mean_wi,std_wi -dhsloc none -traintype all -fmlayer 19 -njobs 1`
 9. Poverty maps: `python batch_infer_poverty_maps.py -ccode UG -model CB`
 10. Cross-country testing: `python batch_cross_predictions.py`
-
-## Plots in paper (notebooks)
-- Open [Main results](paper/main.ipynb) (or download figures [here](paper/main-plots))
-- Open [Supplementary material](paper/supmat.ipynb) (or download figures [here](paper/supmat-plots))
-- Download [results](paper/results/)
-
-## Interactive tool
-Try out the [interactive tool](http://34.176.244.156/) to see the high-resolution poverty map of Sierra Leone and Uganda.
-
-<picture>
-<img width="1505" alt="screenshot" src="https://github.com/anonpaperwww/PovertyMaps/blob/main/interactive_tool.png">
-</picture>

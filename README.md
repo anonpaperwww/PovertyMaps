@@ -8,6 +8,13 @@ Interpreting wealth distribution via poverty map inference using multimodal data
 ## Plots in paper (notebooks)
 - Open [Main results](paper/main.ipynb) (or download figures [here](paper/main-plots))
 - Open [Supplementary material](paper/supmat.ipynb) (or download figures [here](paper/supmat-plots))
+  - Normal (Gaussian) Test on ground-truth
+  - Descriptive Analysis on ground-truth
+  - Pre-processing: Sample weights
+  - Pre-processing: Data Recency (RMSE vs NRMSE)
+  - Pre-processing: Ablation study using RMSE
+  - Model and Feature Performance (R^2)
+  - Variability all models
 - Download [results](paper/results/)
 
 ## Interactive tool

@@ -5,7 +5,7 @@ Interpreting wealth distribution via poverty map inference using multimodal data
 <img width="888" alt="screenshot" src="https://github.com/anonpaperwww/PovertyMaps/blob/main/paper/main-plots/CNN_CB_model_v3.png">
 </picture>
 
-## Plots in paper (notebooks)
+## Analysis (plots)
 - Open [Main results](paper/main.ipynb) (or download figures [here](paper/main-plots))
 - Open [Supplementary material](paper/supmat.ipynb) (or download figures [here](paper/supmat-plots))
   - Normal (Gaussian) Test on ground-truth

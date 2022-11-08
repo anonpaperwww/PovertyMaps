@@ -20,8 +20,14 @@ Interpreting wealth distribution via poverty map inference using multimodal data
 ## Interactive tool
 Try out the [interactive tool](http://34.176.244.156/) to see the high-resolution poverty map of Sierra Leone and Uganda.
 
+Check how wealth may look now.
 <picture>
-<img width="1505" alt="screenshot" src="https://github.com/anonpaperwww/PovertyMaps/blob/main/interactive_tool.png">
+<img width="1505" alt="screenshot" src="https://github.com/anonpaperwww/PovertyMaps/blob/main/interactive_tool_predict.png">
+</picture>
+
+Check how wealth has changed over the years.
+<picture>
+<img width="1505" alt="screenshot" src="https://github.com/anonpaperwww/PovertyMaps/blob/main/interactive_tool_comparison.png">
 </picture>
 
 ## Scripts

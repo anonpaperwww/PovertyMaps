@@ -31,6 +31,7 @@ from sklearn.metrics import confusion_matrix
 from sklearn.metrics import mean_squared_error
 from pandas.api.types import CategoricalDtype
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -838,6 +839,96 @@ def get_statistical_significance_symbol_from_pvalue(p):
 # PLOTS ON PPLACES
 ####################################################################################################
 
+def plot_poverty_maps(query, output=None):
+  
+  nr = int(len(query.values()))
+  nc = 1
+  sw = 10
+  sh = 8
+  
+  fig,axes = plt.subplots(nr,nc,figsize=(nc*sw,nr*sh))
+  
+  data = pd.DataFrame()
+  for ccode, model in query.items():
+    fn = f'results/pplaces_inference/{ccode}_{model}.csv'
+    df1 = ios.load_csv(fn)
+    fn = f'results/pplaces_inference/{ccode}_features.csv'
+    df2 = ios.load_csv(fn, index_col=None)
+    tmp = df1.set_index('OSMID').join(df2.set_index('OSMID'))
+    data = pd.concat([data, tmp], ignore_index=True)
+    del(df1)
+    del(df2)
+    del(tmp)
+  
+  data = gpd.GeoDataFrame(data, geometry=gpd.points_from_xy(data.lon, data.lat))
+  letters = list('abcdefghijklmnopqrstuvwxyz')
+  
+  mmin, mmax = data.pred_mean_wi.min(), data.pred_mean_wi.max()
+  smin, smax = data.pred_std_wi.min(), data.pred_std_wi.max()
+  
+  for ax, letter, (country, gdf) in zip(*[axes, letters[:nr], data.groupby("country")]):
+    ccode = COUNTRIES[country]['code']
+    # plot mean
+    n = gdf.shape[0]
+    vmin, vcenter, vmax, vstd = gdf.pred_mean_wi.min(), gdf.pred_mean_wi.mean(), gdf.pred_mean_wi.max(), gdf.pred_mean_wi.std()
+    norm = TwoSlopeNorm(vmin=vmin, vcenter=vcenter, vmax=vmax)
+    cmap = 'BrBG'
+    gdf.plot(column='pred_mean_wi', 
+             ax=ax,
+             # cax=cax,
+             markersize=5, 
+             vmin=mmin, vmax=mmax,
+             cmap=cmap,
+             norm=norm,
+             legend=True,
+             legend_kwds={'shrink':0.2, 
+                          'location':'bottom',  # 'left', 'right', 'top', 'bottom'
+                          'orientation':'horizontal', 
+                          # # 'label':'IWI mean',
+                          #'pad':0.01, #-0.2 if ccode=='UG' else -0.1, 
+                          'anchor':(0.55, 2.2)}
+            )
+    ax.text(s=f"({letter})", x=0.0, y=0.96, va='top', ha='left', transform=ax.transAxes)
+    ax.text(s=f"{country}", x=1.1, y=0.7, va='top', ha='center', transform=ax.transAxes)
+    ax.set_axis_off()
+    ax.collections[0].set_rasterized(True)
+    
+    # plot std
+    ax_in = inset_axes(ax, width="100%", height="100%",
+                    bbox_to_anchor=(.61, .04, 1.01, 0.44),
+                    bbox_transform=ax.transAxes)
+    n = gdf.shape[0]
+    vmin, vcenter, vmax, vstd = gdf.pred_std_wi.min(), gdf.pred_std_wi.mean(), gdf.pred_std_wi.max(), gdf.pred_std_wi.std()
+    norm = TwoSlopeNorm(vmin=vmin, vcenter=vcenter, vmax=vmax)
+    cmap = 'PuOr'
+    gdf.plot(column='pred_std_wi', 
+             ax=ax_in,
+             # cax=cax,
+             markersize=0.5, 
+             vmin=smin, vmax=smax,
+             cmap=cmap,
+             norm=norm,
+             legend=True,
+             legend_kwds={'shrink':0.4, 
+                          'location':'bottom', 
+                          'orientation':'horizontal', 
+                          # 'label':'IWI std.dev.',
+                          # 'pad':0.01, #-0.2 if ccode=='UG' else -0.1, 
+                          'anchor':(1.72, -1.9 if ccode=='SL' else 0.93)}
+            )
+    ax_in.set_axis_off()
+    ax_in.collections[0].set_rasterized(True)
+    
+  fig.subplots_adjust(hspace=-0.25)
+  
+  if output is not None:
+    fn = os.path.join(output,f"hr_poverty_maps.pdf")
+    fig.savefig(fn, dpi=300, bbox_inches='tight')
+    print(f"{fn} saved!")
+    
+  plt.show()
+  plt.close()
+  
 def plot_poverty_map(ccode, model, output=None):
   fn = f'results/pplaces_inference/{ccode}_{model}.csv'
   df1 = ios.load_csv(fn)
@@ -874,12 +965,14 @@ def plot_poverty_map(ccode, model, output=None):
           )
   fig.axes[1].tick_params(labelsize=11)
   ax.set_axis_off()
+  title = f"({'a' if ccode=='SL' else 'b'}) {[c for c,obj in COUNTRIES.items() if obj['code']==ccode][0]}"
+  fig.axes[1].set_title(title, y=-8)
   
   # rasterize scatter dots
   ax.collections[0].set_rasterized(True)
     
   if output is not None:
-    fn = os.path.join(output,f"hr_poverty_map_{ccode}_{model}.pdf")
+    fn = os.path.join(output,f"sm_hr_poverty_map_{ccode}_{model}.pdf")
     fig.savefig(fn, dpi=300, bbox_inches='tight')
     print(f"{fn} saved!")
     
@@ -927,16 +1020,26 @@ def plot_pplace_mean_std(query, output=None):
                    col='country', col_order=data.country.unique(),
                    x='pred_mean_wi', y='pred_std_wi', 
                    hue='settlement', hue_order=data.settlement.unique(),
-                   size='population', sizes=(1,100), palette=['tab:blue','tab:orange'],
+                   size='population', sizes=(1,200), palette=['tab:blue','tab:orange'],
                    alpha=0.3,
-                   height=4.0, aspect=0.8)
+                   height=3.8, aspect=0.68)
 
   fg.set_xlabels("Pred. IWI_mean")
   fg.set_ylabels("Pred. IWI_std")
   fg.map_dataframe(annotations)
   fg.set_titles(row_template = '{row_name}', col_template = '{col_name}')
-  plt.subplots_adjust(wspace=0.1, hspace=0.1)
   
+  add_panel_labels(fg)
+  plt.tight_layout()
+  plt.subplots_adjust(wspace=0.2, hspace=0.25)
+  sns.move_legend(fg, "upper left", bbox_to_anchor=(0.935, 0.855), handletextpad=0.1)
+  #h,l = fg.axes.flatten()[0].get_legend_handles_labels()
+  #fg.legend(h[0:7],l[0:7], bbox_to_anchor=(0.935, 0.855), loc='upper left', handletextpad=0.1)
+
+#   for t in fg._legend.texts:
+#     text = t.get_text()
+#     t.set_text(text if text=='0' or text in ['settlement','population','urban','rural'] else  f"{int(float(text)/1000)}K")
+    
   # rasterize scatter dots
   for ax in fg.axes.flatten():
     ax.collections[0].set_rasterized(True)
@@ -1416,6 +1519,14 @@ def plot_wealth_distribution_per_year_and_settlement(root, countries, output=Non
   plt.close()
   
 
+def add_panel_labels(fg):
+  panels = fg.axes.flatten()
+  npanels = panels.shape[0]
+  letters = list('abcdefghijklmnopqrstuvwxyz')
+  
+  for ax, label in zip(*[panels,letters[:npanels]]):
+    ax.text(s=f'({label})', x=-0.15, y=1.12, va='top', ha='left', transform=ax.transAxes)
+    
   
 def plot_summary_performance(df, output=None):
 
@@ -1472,19 +1583,22 @@ def plot_summary_performance(df, output=None):
                    col_order=['recency','relocation','augmented','weighted'],
                    x="configuration", y='value', hue='performance',
                    sharex=False,sharey=True,
-                   height=2.8, aspect=1.0,
+                   height=2.6, aspect=1.0,
                    legend_out=True,
                    palette='Paired',
                    margin_titles=True)
   fg.map_dataframe(annot, x="configuration", y='value')
-  sns.move_legend(fg, "upper left", bbox_to_anchor=(1, 0.6))
+  sns.move_legend(fg, "upper left", bbox_to_anchor=(0.98, 0.6))
+  add_panel_labels(fg)
   
   fg.set_titles(row_template = '{row_name}', col_template = '{col_name}')
   # fg.set_xticklabels(rotation=90)
   fg.set_ylabels(metric.upper())
   fg.set_xlabels('')
   
+  
   plt.tight_layout()
+  plt.subplots_adjust(hspace=0.25)
   
   if output is not None:
     fn = os.path.join(output,f'baselines_{metric}.pdf')
@@ -1664,7 +1778,7 @@ def plot_variability(df_rs, df_gt, output=None):
   # figure
   linestyles = ['solid','dotted','dashed']
   fg = sns.FacetGrid(data=data, col='country', row='kind', hue='settlement', hue_order=['urban','rural'], 
-                     height=3.0, aspect=1.3, margin_titles=True, legend_out=True)
+                     height=2.6, aspect=1., margin_titles=True, legend_out=True)
   
   # titles
   fg.set_titles(row_template = '{row_name}', col_template = '{col_name}')
@@ -1681,7 +1795,7 @@ def plot_variability(df_rs, df_gt, output=None):
         for r, kind in enumerate(data.kind.unique()):
           ax=fg.axes[r,c]
           ax.axvline(q, ls='dotted', c='lightgrey') #(0, (1, 10))
-          if r>0 and i>0 and ((i!=2 and country=='Sierra Leone') or (i not in [2,3] and country=='Uganda')) :
+          if i>0 and ((i!=2 and country=='Sierra Leone') or (i not in [2,3] and country=='Uganda')) :
             ax.text(s=f'Q{i}', x=(q+qold)/2, y=1.0, transform=ax.get_xaxis_transform(), 
                     ha='center', c='lightgrey',va='top',size=12, bbox=dict(facecolor='white', edgecolor='none', pad=2.5)) 
         qold = q.copy()
@@ -1695,8 +1809,10 @@ def plot_variability(df_rs, df_gt, output=None):
   
   # titles (again), lables, and final touches
   fg.set_titles(row_template = '{row_name}', col_template = '{col_name}')
-  plt.subplots_adjust(wspace=0.1, hspace=0.1)
-  # plt.tight_layout()
+  add_panel_labels(fg)
+  plt.tight_layout()
+  plt.subplots_adjust(hspace=0.25)
+  sns.move_legend(fg, "upper left", bbox_to_anchor=(0.98, 0.6))
   
   # goodnes of fit (polynomial)
   for country, df1 in data.groupby('country'):
@@ -1853,7 +1969,7 @@ def plot_cross_country_performance(df_dr, metric, results, overall=True, output=
                      hue='model', palette=palette, markers=markers)
   else:
     # all countries
-    fg = sns.FacetGrid(data=df_summary.round(2), col='kind',height=4, aspect=0.9, 
+    fg = sns.FacetGrid(data=df_summary.round(2), col='kind',height=3.8, aspect=0.62, 
                        legend_out=True, sharex=False, sharey=False)
     markers = ['X','o']
     fg.map_dataframe(sns.scatterplot, x=f'{metric}_within', y=f"{metric}_across", hue='model', 
@@ -1902,7 +2018,13 @@ def plot_cross_country_performance(df_dr, metric, results, overall=True, output=
   
   fg.set_xlabels(f"{metric.upper()} within-country")
   fg.set_ylabels(f"{metric.upper()} cross-country")
-  plt.subplots_adjust(wspace=0.2, hspace=0.2)
+  
+  add_panel_labels(fg)
+  plt.tight_layout()
+  plt.subplots_adjust(wspace=0.25, hspace=0.25)
+  sns.move_legend(fg, "upper left", bbox_to_anchor=(0.935, 0.99), handletextpad=0.1)
+
+  #plt.subplots_adjust(wspace=0.2, hspace=0.2)
   
   ### savefig
   if output is not None:

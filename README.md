@@ -2,7 +2,7 @@
 Interpreting wealth distribution via poverty map inference using multimodal data
 
 <picture>
-<img width="888" alt="screenshot" src="https://github.com/anonpaperwww/PovertyMaps/blob/main/paper/main-plots/CNN_CB_model_v3.png">
+<img width="888" alt="screenshot" src="https://github.com/anonpaperwww/PovertyMaps/blob/main/paper/main-plots/CNN_CB_model_v6.png">
 </picture>
 
 ## Analysis (plots)

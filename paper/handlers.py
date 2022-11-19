@@ -16,6 +16,7 @@ from scipy.stats import pearsonr
 from scipy.stats import shapiro
 from scipy.stats import anderson
 from scipy.stats import normaltest
+from mycolorpy import colorlist as mcp
 import matplotlib.image as mpimg
 from collections import OrderedDict
 import matplotlib.gridspec as gridspec
@@ -236,28 +237,36 @@ def get_summary_performance(df, only_best=True, metric='mse', output=None):
     group_rec = ['country','model','relocation','augmented','weighted','recency']
     df_rec = data.query("augmented=='no' and weighted=='no' and features in @BASIC_FEATURES").copy()
     df_rec = df_rec.query("relocation==@RELOCATION_BEST") if only_best else df_rec
-    df_rec = df_rec.groupby(group_rec).agg({metric:['mean','std']}).reset_index()
+    df_rec = df_rec.groupby(group_rec).agg({metric:['mean','std'], 
+                                            f"{metric}_mean_wi":['mean','std'], 
+                                            f"{metric}_std_wi":['mean','std'],}).reset_index()
     df_rec.columns = [col[0] if col[1]=='' else '_'.join(col).strip() for col in df_rec.columns.values]
     
     # relocation
     group_rel = ['country','model','recency','augmented','weighted','relocation']
     df_rel = data.query("augmented=='no' and weighted=='no' and features in @BASIC_FEATURES").copy()
     df_rel = df_rel.query("recency==@RECENCY_BEST") if only_best else df_rel
-    df_rel = df_rel.groupby(group_rel).agg({metric:['mean','std']}).reset_index()
+    df_rel = df_rel.groupby(group_rel).agg({metric:['mean','std'], 
+                                            f"{metric}_mean_wi":['mean','std'], 
+                                            f"{metric}_std_wi":['mean','std'],}).reset_index()
     df_rel.columns = [col[0] if col[1]=='' else '_'.join(col).strip() for col in df_rel.columns.values]
     
     # augmented
     group_aug = ['country','model','recency','relocation','weighted','augmented']
     df_aug = data.query("model in @CNN_CLASS and weighted=='no' and features in @IMAGE_FEATURE").copy()
     df_aug = df_aug.query("recency==@RECENCY_BEST and relocation==@RELOCATION_BEST") if only_best else df_aug
-    df_aug = df_aug.groupby(group_aug).agg({metric:['mean','std']}).reset_index()
+    df_aug = df_aug.groupby(group_aug).agg({metric:['mean','std'], 
+                                            f"{metric}_mean_wi":['mean','std'], 
+                                            f"{metric}_std_wi":['mean','std'],}).reset_index()
     df_aug.columns = [col[0] if col[1]=='' else '_'.join(col).strip() for col in df_aug.columns.values]
     
     # weighted samples
     group_wei = ['country','model','recency','relocation','augmented','weighted']
     df_wei = data.query("model in @MODELS_CB and features in @METADATA_FEATURES").copy()
     df_wei = df_wei.query("recency==@RECENCY_BEST and relocation==@RELOCATION_BEST") if only_best else df_wei
-    df_wei = df_wei.groupby(group_wei).agg({metric:['mean','std']}).reset_index()
+    df_wei = df_wei.groupby(group_wei).agg({metric:['mean','std'], 
+                                            f"{metric}_mean_wi":['mean','std'], 
+                                            f"{metric}_std_wi":['mean','std'],}).reset_index()
     df_wei.columns = [col[0] if col[1]=='' else '_'.join(col).strip() for col in df_wei.columns.values]
     
     # condensed aggregated
@@ -896,7 +905,7 @@ def plot_poverty_maps(query, output=None):
                            y=0.11 if ccode=='SL' else 0.12, 
                            va='bottom', ha='left', transform=ax.transAxes)
     ax.set_axis_off()
-    ax.collections[0].set_rasterized(True)
+    # ax.collections[0].set_rasterized(True)
     
     # plot std
     ax_in = inset_axes(ax, width="100%", height="100%",
@@ -926,7 +935,7 @@ def plot_poverty_maps(query, output=None):
                              y=0.11 if ccode=='SL' else 0.12, 
                              va='bottom', ha='right', transform=ax.transAxes)
     ax_in.set_axis_off()
-    ax_in.collections[0].set_rasterized(True)
+    # ax_in.collections[0].set_rasterized(True)
     
   fig.subplots_adjust(hspace=-0.35)
   
@@ -1151,7 +1160,6 @@ def plot_map(df, kind='wealth', output=None):
   categorical = column!='mean_wi'
   
   if categorical:
-    from mycolorpy import colorlist as mcp
     if kind=='year':
       cmap = 'Set2'
       m = 2
@@ -1537,46 +1545,61 @@ def add_panel_labels(fg):
     ax.text(s=f'({label})', x=-0.15, y=1.12, va='top', ha='left', transform=ax.transAxes)
     
   
-def plot_summary_performance(df, output=None):
+def plot_summary_performance(df, metric='nrmse', output=None):
 
   def annot(x, y, **kwargs):
     
     ax = plt.gca()
     data = kwargs.pop("data")
-    fs = 11 # fontsize
+    fs = 10 # fontsize
     
     metric = data['metric'].unique()[0]
-    for outputn,df in data.groupby('outputn'):
-      delta_y = 0.55 if metric=='rmse' else 0.07 if metric=='nrmse' else 0
-      delta_x = -0.2 if outputn=='mean' else 0.25 if outputn=='std' else 0
-      counter=0
-      for index, row in df.iterrows():
-        yy = row[y]+delta_y
-        ax.text(s=str(row[y]), x=counter+delta_x, y=yy, ha='center', va='top', 
-                fontsize=fs, color='grey')
-        counter+=1
+    for kind, tmp in data.query("outputn=='mean'").groupby("kind",sort=False):
+      confs = tmp.configuration.unique()
+      
+      for outputn in data.outputn.unique():
+      
+        df = data.query("outputn==@outputn and kind==@kind").sort_values('value', ascending=True).copy()
+
+        delta_y = 0.55 if metric=='rmse' else 0.08 if metric=='nrmse' else 0
+        delta_x = -0.23 if outputn=='mean' else 0.23 if outputn=='std' else 0
+    
+        for xx, conf in enumerate(confs):
+          row = df.query("configuration==@conf").iloc[0]
+
+          yy = row[y]+delta_y
+          ax.text(s=str(row[y]), x=xx+delta_x, y=yy, ha='center', va='top', 
+                  fontsize=fs, color='grey')
       
   # metric
-  metric = [c.split('_')[0] for c in df.columns if c not in ['country','configuration','kind']][0]
-  message = f"The {'lower' if 'mse' in metric else 'larger'} the better"
+  metrics = [c.split('_')[0] for c in df.columns if c not in ['country','configuration','kind']]
+  if metric not in metric:
+    raise Exception('Metric does not exist.')
+  
+  message = f"The {'lower' if 'mse' in metric else 'larger'} {metric}, the better"
   print(message)
   
   # data
   cols = ['kind','country','performance','configuration','value','outputn']
   
-  key = f'{metric}_mean'
+  gen = '_wi_mean'
+  hue_order = []
+          
+  key = f'{metric}_mean{gen}'
   data1 = df.copy()
   data1.rename(columns={key:'value'}, inplace=True)
   data1.loc[:,'outputn'] = 'mean'
   data1.loc[:,'performance'] = r'$\epsilon_\mu$'
   data1 = data1[cols].copy()
-  
-  key = f'{metric}_std'
+  hue_order.append(data1.performance.unique()[0])
+          
+  key = f'{metric}_std{gen}'
   data2 = df.copy()
   data2.rename(columns={key:'value'}, inplace=True)
   data2.loc[:,'outputn'] = 'std'
   data2.loc[:,'performance'] = r'$\epsilon_\sigma$'
   data2 = data2[cols].copy()
+  hue_order.append(data2.performance.unique()[0])
   
   data = pd.concat([data1,data2], ignore_index=True)
   data.loc[:,'metric'] = metric
@@ -1584,19 +1607,20 @@ def plot_summary_performance(df, output=None):
   del(data2)
   
   # plot
-  indexes = df.query("kind=='model'").index
- 
-  fg = sns.catplot(data=data, 
+  # indexes = df.query("kind=='model'").index  
+  fg = sns.catplot(data=data.sort_values('value', ascending=True), 
                    kind='bar',
                    col="kind", row="country", 
                    col_order=['recency','relocation','augmented','weighted'],
-                   x="configuration", y='value', hue='performance',
+                   x="configuration", y='value', 
+                   hue='performance', hue_order=hue_order,
                    sharex=False,sharey=True,
                    height=2.6, aspect=1.0,
                    legend_out=True,
                    palette='Paired',
                    margin_titles=True)
   fg.map_dataframe(annot, x="configuration", y='value')
+
   sns.move_legend(fg, "upper left", bbox_to_anchor=(0.98, 0.6))
   add_panel_labels(fg)
   
@@ -1605,7 +1629,7 @@ def plot_summary_performance(df, output=None):
   fg.set_ylabels(metric.upper())
   fg.set_xlabels('')
   
-  
+
   plt.tight_layout()
   plt.subplots_adjust(hspace=0.25)
   

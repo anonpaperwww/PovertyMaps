@@ -843,8 +843,8 @@ def plot_poverty_maps(query, output=None):
   
   nr = int(len(query.values()))
   nc = 1
-  sw = 10
-  sh = 8
+  sw = 9.
+  sh = 9.
   
   fig,axes = plt.subplots(nr,nc,figsize=(nc*sw,nr*sh))
   
@@ -868,6 +868,7 @@ def plot_poverty_maps(query, output=None):
   
   for ax, letter, (country, gdf) in zip(*[axes, letters[:nr], data.groupby("country")]):
     ccode = COUNTRIES[country]['code']
+    
     # plot mean
     n = gdf.shape[0]
     vmin, vcenter, vmax, vstd = gdf.pred_mean_wi.min(), gdf.pred_mean_wi.mean(), gdf.pred_mean_wi.max(), gdf.pred_mean_wi.std()
@@ -876,26 +877,30 @@ def plot_poverty_maps(query, output=None):
     gdf.plot(column='pred_mean_wi', 
              ax=ax,
              # cax=cax,
-             markersize=5, 
+             markersize=6., 
              vmin=mmin, vmax=mmax,
              cmap=cmap,
              norm=norm,
              legend=True,
-             legend_kwds={'shrink':0.2, 
+             legend_kwds={'shrink':0.20, 
                           'location':'bottom',  # 'left', 'right', 'top', 'bottom'
                           'orientation':'horizontal', 
                           # # 'label':'IWI mean',
                           #'pad':0.01, #-0.2 if ccode=='UG' else -0.1, 
-                          'anchor':(0.55, 2.2)}
+                          'anchor':(0.30 if ccode=='SL' else 0.55, 
+                                    2.55 if ccode=='SL' else 2.6)}
             )
-    ax.text(s=f"({letter})", x=0.0, y=0.96, va='top', ha='left', transform=ax.transAxes)
-    ax.text(s=f"{country}", x=1.1, y=0.7, va='top', ha='center', transform=ax.transAxes)
+    ax.text(s=f"({letter}) {country}", x=0.0, y=0.95, va='top', ha='left', transform=ax.transAxes)
+    # ax.text(s=f"{country}", x=1.0, y=0.74, va='top', ha='center', transform=ax.transAxes)
+    ax.text(s=f"IWI mean", x=0.22 if ccode=='SL' else 0.46, 
+                           y=0.11 if ccode=='SL' else 0.12, 
+                           va='bottom', ha='left', transform=ax.transAxes)
     ax.set_axis_off()
     ax.collections[0].set_rasterized(True)
     
     # plot std
     ax_in = inset_axes(ax, width="100%", height="100%",
-                    bbox_to_anchor=(.61, .04, 1.01, 0.44),
+                    bbox_to_anchor=(.66, .04, 1.11, 0.49),
                     bbox_transform=ax.transAxes)
     n = gdf.shape[0]
     vmin, vcenter, vmax, vstd = gdf.pred_std_wi.min(), gdf.pred_std_wi.mean(), gdf.pred_std_wi.max(), gdf.pred_std_wi.std()
@@ -904,22 +909,26 @@ def plot_poverty_maps(query, output=None):
     gdf.plot(column='pred_std_wi', 
              ax=ax_in,
              # cax=cax,
-             markersize=0.5, 
+             markersize=1., 
              vmin=smin, vmax=smax,
              cmap=cmap,
              norm=norm,
              legend=True,
-             legend_kwds={'shrink':0.4, 
+             legend_kwds={'shrink':0.30 if ccode=='SL' else 0.33, 
                           'location':'bottom', 
                           'orientation':'horizontal', 
                           # 'label':'IWI std.dev.',
                           # 'pad':0.01, #-0.2 if ccode=='UG' else -0.1, 
-                          'anchor':(1.72, -1.9 if ccode=='SL' else 0.93)}
+                          'anchor':(1.32 if ccode=='SL' else 1.152, #2.15 
+                                    -1.6 if ccode=='SL' else 2.035)}
             )
+    ax_in.text(s=f"IWI STD", x=1.0 if ccode=='SL' else 0.91, 
+                             y=0.11 if ccode=='SL' else 0.12, 
+                             va='bottom', ha='right', transform=ax.transAxes)
     ax_in.set_axis_off()
     ax_in.collections[0].set_rasterized(True)
     
-  fig.subplots_adjust(hspace=-0.25)
+  fig.subplots_adjust(hspace=-0.35)
   
   if output is not None:
     fn = os.path.join(output,f"hr_poverty_maps.pdf")
@@ -2001,7 +2010,7 @@ def plot_cross_country_performance(df_dr, metric, results, overall=True, output=
         val = tmp2.iloc[0][var_col.replace('IWI_','')]
         
         subi = FEATURE_MAP[tmp2.iloc[0].features]
-        c = 'lightgrey'
+        c = 'grey'
         
         ax.plot([mins[kind],val], [val,val], ls='dotted', color=c, zorder=0, lw=1)
         ax.plot([val,val], [mins[kind],val], ls='dotted', color=c, zorder=0, lw=1)
